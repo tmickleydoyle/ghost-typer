@@ -1,0 +1,246 @@
+{
+  "hardware": {
+    "cpu": "Darwin arm64",
+    "cores": 10,
+    "ram_gb": 32,
+    "gpu": "none used",
+    "python": "3.13.4",
+    "torch": "2.15.0"
+  },
+  "compile_dense": {
+    "seconds": 20.5,
+    "runs": [
+      20.6,
+      20.5
+    ],
+    "byte_identical_rebuild": true,
+    "sha256": "349ae699c0a4e98843cde0949e8da187ce19935b6f5558c91bf580ba6444fbc0",
+    "mb": 1599.67,
+    "peak_memory_gb": 4.3,
+    "tokenize_seconds": 2.76,
+    "count_seconds": 12.45,
+    "build_tensors_seconds": 2.22,
+    "source_lines": 126347,
+    "params": 399916440,
+    "nonzero_params": 13553535,
+    "vocab": 6000,
+    "min_context_count": 37.0,
+    "contexts_seen": 2127286,
+    "contexts_kept": 12607
+  },
+  "compile_web": {
+    "seconds": 29.7,
+    "runs": [
+      29.8,
+      29.7
+    ],
+    "byte_identical_rebuild": true,
+    "sha256": "e45f3066f6e6c19d9191b11eb6910cbc1b91013fcd9f51063698a4cc139f8135",
+    "mb": 10.69,
+    "contexts": 512533,
+    "vocab": 30893,
+    "deltas": "u8"
+  },
+  "pytorch": {
+    "load_seconds": 0.2,
+    "next_word_ms": 65.0,
+    "generate_tokens_per_second": 17.8,
+    "threads": 8
+  },
+  "web_keystroke_latency": {
+    "runtime": "web/autocomplete.ts on Bun",
+    "median_ms": 2.61,
+    "p95_ms": 4.68,
+    "max_ms": 5.57
+  },
+  "max_logprob_error_vs_ngram": 1.4416141219442125e-05,
+  "heldout_typing_web": {
+    "policy": {
+      "tau": 0.71,
+      "min_support": 0,
+      "max_words": 8
+    },
+    "heldout": {
+      "prompts": 711,
+      "wildchat": 1000
+    },
+    "tau=0.71": {
+      "all": {
+        "precision": 0.9021,
+        "coverage": 0.3743,
+        "keystrokes_saved": 0.2219,
+        "shown": 40287
+      },
+      "prompts": {
+        "precision": 0.907,
+        "coverage": 0.394,
+        "keystrokes_saved": 0.2303,
+        "shown": 16342
+      },
+      "wildchat": {
+        "precision": 0.8988,
+        "coverage": 0.3619,
+        "keystrokes_saved": 0.2166,
+        "shown": 23945
+      }
+    },
+    "tau=0.8": {
+      "all": {
+        "precision": 0.9335,
+        "coverage": 0.326,
+        "keystrokes_saved": 0.1948,
+        "shown": 35092
+      },
+      "prompts": {
+        "precision": 0.94,
+        "coverage": 0.3441,
+        "keystrokes_saved": 0.201,
+        "shown": 14273
+      },
+      "wildchat": {
+        "precision": 0.9291,
+        "coverage": 0.3147,
+        "keystrokes_saved": 0.1909,
+        "shown": 20819
+      }
+    },
+    "tau=0.9": {
+      "all": {
+        "precision": 0.9644,
+        "coverage": 0.262,
+        "keystrokes_saved": 0.1569,
+        "shown": 28204
+      },
+      "prompts": {
+        "precision": 0.9667,
+        "coverage": 0.2787,
+        "keystrokes_saved": 0.1607,
+        "shown": 11559
+      },
+      "wildchat": {
+        "precision": 0.9628,
+        "coverage": 0.2516,
+        "keystrokes_saved": 0.1545,
+        "shown": 16645
+      }
+    },
+    "tau=0.95": {
+      "all": {
+        "precision": 0.977,
+        "coverage": 0.206,
+        "keystrokes_saved": 0.1228,
+        "shown": 22175
+      },
+      "prompts": {
+        "precision": 0.9813,
+        "coverage": 0.2177,
+        "keystrokes_saved": 0.1252,
+        "shown": 9028
+      },
+      "wildchat": {
+        "precision": 0.9741,
+        "coverage": 0.1987,
+        "keystrokes_saved": 0.1212,
+        "shown": 13147
+      }
+    }
+  },
+  "heldout_typing_dense_tables": {
+    "policy": {
+      "tau": 0.71,
+      "min_support": 0,
+      "max_words": 8
+    },
+    "heldout": {
+      "prompts": 711,
+      "wildchat": 1000
+    },
+    "tau=0.71": {
+      "all": {
+        "precision": 0.9326,
+        "coverage": 0.2743,
+        "keystrokes_saved": 0.1521,
+        "shown": 29525
+      },
+      "prompts": {
+        "precision": 0.944,
+        "coverage": 0.307,
+        "keystrokes_saved": 0.1708,
+        "shown": 12734
+      },
+      "wildchat": {
+        "precision": 0.9239,
+        "coverage": 0.2538,
+        "keystrokes_saved": 0.1403,
+        "shown": 16791
+      }
+    },
+    "tau=0.8": {
+      "all": {
+        "precision": 0.9563,
+        "coverage": 0.2247,
+        "keystrokes_saved": 0.125,
+        "shown": 24188
+      },
+      "prompts": {
+        "precision": 0.9631,
+        "coverage": 0.2542,
+        "keystrokes_saved": 0.1401,
+        "shown": 10541
+      },
+      "wildchat": {
+        "precision": 0.9511,
+        "coverage": 0.2063,
+        "keystrokes_saved": 0.1155,
+        "shown": 13647
+      }
+    },
+    "tau=0.9": {
+      "all": {
+        "precision": 0.9806,
+        "coverage": 0.1512,
+        "keystrokes_saved": 0.0816,
+        "shown": 16279
+      },
+      "prompts": {
+        "precision": 0.9852,
+        "coverage": 0.176,
+        "keystrokes_saved": 0.092,
+        "shown": 7300
+      },
+      "wildchat": {
+        "precision": 0.9769,
+        "coverage": 0.1357,
+        "keystrokes_saved": 0.0751,
+        "shown": 8979
+      }
+    },
+    "tau=0.95": {
+      "all": {
+        "precision": 0.9907,
+        "coverage": 0.1009,
+        "keystrokes_saved": 0.0532,
+        "shown": 10862
+      },
+      "prompts": {
+        "precision": 0.9939,
+        "coverage": 0.1186,
+        "keystrokes_saved": 0.0601,
+        "shown": 4917
+      },
+      "wildchat": {
+        "precision": 0.9881,
+        "coverage": 0.0899,
+        "keystrokes_saved": 0.0489,
+        "shown": 5945
+      }
+    }
+  },
+  "heldout_next_token_dense": {
+    "heldout_lines": 711,
+    "heldout_tokens": 9466,
+    "next_token_top1": 0.253,
+    "next_token_top3": 0.411,
+    "oov_rate": 0.04
+  }
+}

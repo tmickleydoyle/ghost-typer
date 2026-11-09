@@ -1,0 +1,6 @@
+torch
+transformers>=4.45
+tokenizers
+safetensors
+numpy
+pyarrow  # scripts/fetch_coding_prompts.py only

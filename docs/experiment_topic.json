@@ -1,0 +1,41 @@
+{
+  "topic_words": 48,
+  "results": [
+    {
+      "lambda": 0.0,
+      "tau": 0.72,
+      "min_support": 0,
+      "precision": 0.9029,
+      "coverage": 0.3866,
+      "keystrokes_saved": 0.2296,
+      "shown": 16034
+    },
+    {
+      "lambda": 0.25,
+      "tau": 0.72,
+      "min_support": 0,
+      "precision": 0.9032,
+      "coverage": 0.3864,
+      "keystrokes_saved": 0.2297,
+      "shown": 16026
+    },
+    {
+      "lambda": 0.5,
+      "tau": 0.72,
+      "min_support": 0,
+      "precision": 0.9031,
+      "coverage": 0.386,
+      "keystrokes_saved": 0.2293,
+      "shown": 16007
+    },
+    {
+      "lambda": 1.0,
+      "tau": 0.73,
+      "min_support": 0,
+      "precision": 0.904,
+      "coverage": 0.3811,
+      "keystrokes_saved": 0.2281,
+      "shown": 15804
+    }
+  ]
+}

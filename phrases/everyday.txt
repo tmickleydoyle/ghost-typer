@@ -1,0 +1,275 @@
+Can you help me?
+Can you help me with this?
+Can you help me, please?
+Can you do me a favor?
+Can you call me back?
+Can you call me back later?
+Can you say that again?
+Can you repeat that, please?
+Can you speak more slowly, please?
+Can you send me the file?
+Can you pick me up?
+Can you pick me up at the airport?
+Can you turn off the lights?
+Can you turn on the lights?
+Can you turn down the music?
+Can you open the window?
+Can you close the door?
+Can you pass the salt, please?
+Can you give me a hand?
+Can you tell me the way to the station?
+Can I have the check, please?
+Can I have a glass of water?
+Can I have the menu, please?
+Can I get a glass of water?
+Can I get a cup of coffee?
+Can I get the bill, please?
+Can I pay by card?
+Can I pay with cash?
+Can I try this on?
+Can I borrow your pen?
+Can I use your phone?
+Can I use the bathroom?
+Can I ask a question?
+Can I talk to you for a minute?
+Can I come with you?
+Could you help me, please?
+Could you please help me?
+Could you tell me where the bathroom is?
+Could you please send me the details?
+Could you please call me back?
+Could I have some water, please?
+Would you like some coffee?
+Would you like some tea?
+Would you like something to drink?
+Would you like to join us?
+Would you like to come over?
+Would you mind closing the door?
+Would you mind helping me?
+Do you have a minute?
+Do you have any questions?
+Do you have the time?
+Do you have a table for two?
+Do you know what time it is?
+Do you know where the station is?
+Do you know how to get there?
+Do you speak English?
+Do you need any help?
+Do you need a ride?
+Do you want something to eat?
+Do you want to go out tonight?
+Do you accept credit cards?
+What time is it?
+What time is it now?
+What time do you open?
+What time do you close?
+What time does the train leave?
+What time does the meeting start?
+What time should we meet?
+What day is it today?
+What is the date today?
+What's the weather like today?
+What's the weather like tomorrow?
+What do you want to eat?
+What do you want to do?
+What do you mean?
+What do you think?
+What happened?
+What is this?
+What is that?
+What's wrong?
+What's for dinner?
+What would you like to order?
+What would you recommend?
+Where is the bathroom?
+Where is the restroom?
+Where is the nearest hospital?
+Where is the train station?
+Where is the bus stop?
+Where is the exit?
+Where are you?
+Where are you going?
+Where are my keys?
+Where did you put it?
+Where do you live?
+Where should we meet?
+How much is this?
+How much does it cost?
+How much is it?
+How much do I owe you?
+How do I get there?
+How do I get to the airport?
+How do you spell that?
+How do you say that in English?
+How do you know?
+How long does it take?
+How long will it take?
+How long have you been here?
+How far is it?
+How many people are coming?
+How old are you?
+How was the movie?
+When is the meeting?
+When are you coming home?
+When will you be back?
+When does the store open?
+When does the store close?
+Why are you late?
+Why not?
+Who is calling, please?
+Who is it?
+Is it going to rain today?
+Is there a bank near here?
+Is there a pharmacy near here?
+Is this the right way?
+Is breakfast included?
+It's going to rain today.
+It's very hot today.
+It's really cold outside.
+It's raining outside.
+It's snowing outside.
+It looks like rain.
+Don't forget your umbrella.
+Don't forget to call me.
+Don't forget to lock the door.
+I'm hungry.
+I'm thirsty.
+I'm tired.
+I'm so tired.
+I'm busy right now.
+I'm running late.
+I'm going to be late.
+I'll be home late tonight.
+I'm going to bed.
+I'm going to the store.
+I'm going to the gym.
+I'm going home.
+I'm leaving now.
+I'm looking for the bathroom.
+I'm looking for a job.
+I'm just looking, thank you.
+I'm not feeling well.
+I don't feel well.
+I have a headache.
+I have a cold.
+I have a doctor's appointment.
+I need to see a doctor.
+I need to go to the hospital.
+I need to go to the store.
+I need to go to work.
+I need to go to bed.
+I need to talk to you.
+I need some help.
+I need your help.
+I need a break.
+I need more time.
+I need to make a reservation.
+I would like to make a reservation.
+I would like to order a pizza.
+I would like a cup of coffee, please.
+I would like the chicken, please.
+I'd like to book a table for two.
+I'd like to check in, please.
+I'd like to check out, please.
+I'll have the same.
+I'll have a coffee, please.
+I'll take it.
+I'll pay for dinner.
+I'll call you back.
+I'll see you there.
+I'll be there in five minutes.
+I'll get back to you.
+I'll do it later.
+I'll think about it.
+I lost my keys.
+I lost my phone.
+I forgot my password.
+I can't find my keys.
+I can't find my phone.
+I can't hear you.
+I don't understand.
+I don't know.
+I don't know what to do.
+I don't have time.
+I didn't know that.
+I have a question.
+I have an idea.
+I have to go.
+I have to go now.
+I have to work tomorrow.
+I got it.
+I understand.
+I agree.
+Let's go.
+Let's go home.
+Let's go out for dinner.
+Let's eat.
+Let's get started.
+Let's meet at the coffee shop.
+Let's talk about it later.
+Let's take a break.
+Let's watch a movie.
+Let me check.
+Let me help you.
+Let me think about it.
+Let me see.
+Let me call you back.
+Please call me back.
+Please wait a moment.
+Please hold on.
+Please sit down.
+Please turn off your phone.
+Please be quiet.
+Please close the door.
+Please wait here.
+Just a moment, please.
+Just a minute.
+One moment, please.
+Hold on a second.
+Wait for me.
+Hurry up.
+Come here.
+Come with me.
+Follow me.
+Turn left at the corner.
+Turn right at the light.
+Go straight ahead.
+It's on the left.
+It's on the right.
+It's right over there.
+It's not far from here.
+It's just around the corner.
+The meeting is at noon.
+The meeting has been canceled.
+The train is late.
+The store is closed.
+The food is delicious.
+The bill, please.
+Check, please.
+Table for two, please.
+A cup of coffee, please.
+A glass of water, please.
+Water, please.
+Keep the change.
+Here you go.
+Here it is.
+This is delicious.
+This is too expensive.
+That sounds good.
+That sounds great.
+That works for me.
+See you at the meeting.
+Call me if you need anything.
+Call an ambulance.
+Help me, please.
+Help!
+Watch out!
+Be careful.
+Drive safely.
+Did you eat yet?
+Did you sleep well?
+Did you get my message?
+Did you see that?
+Have you eaten yet?
+Have you seen my keys?
+Have you been here before?

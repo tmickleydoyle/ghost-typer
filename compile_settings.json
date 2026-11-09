@@ -1,0 +1,35 @@
+{
+  "_comment": "Chosen by scripts/sweep.py (docs/sweep.json): best keystrokes saved at >= 90% precision on held-out prompts (OASST/MBPP/CoNaLa + WildChat). hf = dense transformers model (vocab capped for width); web = sparse browser export.",
+  "hf": {
+    "n_prev": 3,
+    "smoothing": "kn",
+    "phrase_weight": 1.0,
+    "prompt_weight": 1.0,
+    "reply_weight": 1.0,
+    "wildchat_weight": 1.0,
+    "max_vocab": 6000,
+    "min_word_count": 2,
+    "min_count": null,
+    "force_phrases": false,
+    "param_target": 400000000
+  },
+  "web": {
+    "n_prev": 3,
+    "smoothing": "kn",
+    "phrase_weight": 1.0,
+    "prompt_weight": 1.0,
+    "reply_weight": 1.0,
+    "wildchat_weight": 1.0,
+    "max_vocab": 1000000,
+    "min_word_count": 2,
+    "min_count": 2
+  },
+  "policy": {
+    "tau": 0.71,
+    "min_support": 0,
+    "max_words": 8
+  },
+  "export": {
+    "deltas": "u8"
+  }
+}

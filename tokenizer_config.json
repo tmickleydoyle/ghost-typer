@@ -1,0 +1,15 @@
+{
+  "backend": "tokenizers",
+  "bos_token": "<|endoftext|>",
+  "clean_up_tokenization_spaces": false,
+  "eos_token": "<|endoftext|>",
+  "model_max_length": 128,
+  "pad_token": "<|endoftext|>",
+  "tokenizer_class": "PreTrainedTokenizerFast",
+  "unk_token": "<unk>",
+  "add_prefix_space": true,
+  "model_input_names": [
+    "input_ids",
+    "attention_mask"
+  ]
+}
