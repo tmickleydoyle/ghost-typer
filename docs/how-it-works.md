@@ -153,7 +153,7 @@ construction, and each MLP neuron is fully described by:
 - **Size:** 10.7 MB for 512,533 contexts. As float32 with a JSON header it would be about
   34 MB.
 - **Quality cost:** quantization was accepted only after held-out typing came out the same:
-  90.23% precision and 22.29% keystrokes saved, vs 90.22% / 22.29% unquantized.
+  90.21% precision and 22.19% keystrokes saved, vs 90.20% / 22.19% unquantized.
 
 `web/autocomplete.ts` binary-searches the sorted contexts for the last 1–4 tokens, adds the
 matching neurons' deltas to the unigram logits, and applies softmax. There's no index to build

@@ -37,7 +37,7 @@ zero-dependency TypeScript runtime. **Demo:** https://tmickleydoyle.github.io/gh
 | `model-f32.bin` | float32 (unquantized) | 16.8 MB | 90.2% | 22.2% | reference, exactness checks |
 
 Both files hold the same compile: 30,893 words and 512,533 contexts. Quantization changed
-held-out results by +0.01 points (90.23% vs 90.22% precision; 22.29% saved for both),
+held-out results by ≤ 0.01 points (90.21% vs 90.20% precision; 22.19% saved for both),
 measured by typing 1,711 held-out prompts one character at a time. The runtime reads either
 file.
 
