@@ -31,6 +31,7 @@ TARGET_PRECISION = 0.90
 MAX_EXPORT_MB = 50
 TAUS = [round(0.5 + 0.01 * i, 2) for i in range(46)]  # 0.50 .. 0.95
 SUPPORTS = [0, 2, 5]
+EXTS = [None, 0.8, 0.85, 0.9, 0.95]  # None: extend while the joint probability >= tau
 WILDCHAT_EVAL = 1000
 BASE = bw.Settings(n_prev=3, smoothing="kn", phrase_weight=1, prompt_weight=1, reply_weight=1, wildchat_weight=1,
                    max_vocab=1_000_000, min_word_count=1, min_count=2)
@@ -102,8 +103,9 @@ def best_policy(records) -> dict:
     results = []
     for tau in TAUS:
         for sup in SUPPORTS:
-            m = evaluate(records, sg.Policy(tau=tau, min_support=sup))
-            results.append({"tau": tau, "min_support": sup, **m})
+            for ext in EXTS if sup == 0 else [None]:
+                m = evaluate(records, sg.Policy(tau=tau, min_support=sup, ext=ext))
+                results.append({"tau": tau, "min_support": sup, "ext": ext, **m})
     ok = [r for r in results if r["precision"] is not None and r["precision"] >= TARGET_PRECISION]
     best = max(ok, key=lambda r: r["keystrokes_saved"]) if ok else None
     return {"best": best, "grid": results}
@@ -111,7 +113,8 @@ def best_policy(records) -> dict:
 
 def export_mb(ngram: bw.NGram, vocab: list[str], oov: dict) -> float:
     """Size of web/model.bin for these tables (see export_web.py)."""
-    size = sum(len(p.encode()) + 1 for p in vocab) + 8 * len(vocab) + sum(len(p.encode()) + 5 for p in oov)
+    prefixes = {p[:i] for p in vocab for i in range(1, len(p) + 1)}  # export keeps only these
+    size = sum(len(p.encode()) + 1 for p in vocab) + 8 * len(vocab) + sum(len(p.encode()) + 5 for p in oov if p in prefixes)
     for k in range(1, ngram.order + 1):
         for table in ngram.tables[k].values():
             size += 2 * k + 8 + 6 * len(table)
@@ -129,7 +132,7 @@ def run(s: bw.Settings, src: dict, sets: dict[str, list[str]]) -> dict:
     b = pol["best"]
     per_set = {}
     if b:
-        chosen = sg.Policy(tau=b["tau"], min_support=b["min_support"])
+        chosen = sg.Policy(tau=b["tau"], min_support=b["min_support"], ext=b["ext"])
         per_set = {name: evaluate(rs, chosen) for name, rs in recs.items()}
     out = {
         "settings": asdict(s),

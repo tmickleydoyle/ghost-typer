@@ -6,3 +6,6 @@ __pycache__/
 *.safetensors
 # staging folders for the Hugging Face repos (scripts/stage_hf_web.py)
 dist/
+
+# local experiment workspace (harness, fetched data, variant models); results are in docs/
+lab/

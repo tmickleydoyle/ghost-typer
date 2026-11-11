@@ -94,6 +94,7 @@ def quantize(ngram: bw.NGram, vocab: list[str], oov: dict[str, float], scheme: s
     base = ngram.base_logits.astype(np.float32).astype(np.float64)
     ngram.base_logits = base
     ngram.delta_arrays = lambda ctx: deq[ctx]
+    ngram.clear_caches()  # the float64 deltas are no longer needed; keeps memory down
     oov_q = quantize_oov(oov, vocab)
     return {"tables": tables, "oov_q": oov_q, "oov": {p: q / 255 for p, q in oov_q.items()}}
 
@@ -152,10 +153,30 @@ def export(vocab: list[str], ngram: bw.NGram, oov: dict, policy: sg.Policy, path
     }
 
 
+HEADER_BYTES = 4096  # upper bound for magic + header JSON + padding (actual: ~2 KB)
+
+
+def export_bytes(vocab: list[str], oov_q: dict, contexts: list[int], pairs: list[int], scheme: str = "u8") -> int:
+    """Size of model.bin for a vocabulary and kept contexts / (context, next) pairs per length."""
+    pad = lambda b: -(-b // 8) * 8  # noqa: E731
+    ids = 2 if len(vocab) < 65536 else 4
+    val = {"u8": 1, "f16": 2, "f32": 4}[scheme]
+    size = HEADER_BYTES + pad(sum(len(p.encode()) for p in vocab) + len(vocab) - 1)
+    size += pad(sum(len(p.encode()) for p in oov_q) + len(oov_q)) + pad(len(oov_q)) + pad(4 * len(vocab))
+    for k, (n, p) in enumerate(zip(contexts, pairs), start=1):
+        size += pad(ids * k * n) + pad(2 * n) + pad(ids * p) + pad(val * p)
+    return size
+
+
 def build(settings: bw.Settings, sources: dict, policy: sg.Policy, path: Path = OUT, scheme: str = "u8"):
-    """Compile, quantize and write; returns (info, Suggester using the exported numbers)."""
-    vocab, ngram, stats = bw.compile_tables(settings, sources)
+    """Compile, quantize and write; returns (info, Suggester using the exported numbers).
+
+    With settings.max_export_mb the pruning threshold is raised until model.bin fits."""
+    vocab = bw.build_vocab(settings, sources)
     oov = sg.oov_prefix_rates(settings, sources, vocab)
+    oov_q = quantize_oov(oov, vocab)
+    size = lambda n, p: export_bytes(vocab, oov_q, n, p, scheme)  # noqa: E731
+    vocab, ngram, stats = bw.compile_tables(settings, sources, vocab, size)
     info = export(vocab, ngram, oov, policy, path, scheme)
     sugg = sg.Suggester(vocab, ngram, info.pop("oov"))
     return {**stats, **info}, sugg

@@ -7,9 +7,10 @@ weights, and no other model's outputs were used.
 - `export_web.py` writes the same kind of network in sparse form for the browser.
 - Rebuilds are byte-identical.
 
-The network computes an **interpolated Kneser-Ney 5-gram language model** exactly. It predicts
-the next token from the current token and the 3 before it. Witten-Bell smoothing and other
-context lengths are supported too; the choice was made by measurement (section 9).
+The network computes an **interpolated modified Kneser-Ney 5-gram language model** exactly. It
+predicts the next token from the current token and the 3 before it. Witten-Bell, plain
+Kneser-Ney and other context lengths are supported too; the choice was made by measurement
+(section 9).
 
 ## 1. Source text and tokenizer
 
@@ -48,7 +49,12 @@ token follows each context of length k = 0..4 that ends there, weighted by sourc
   ```
   Witten-Bell:  A_j = c_j / (c + u)                  γ = u / (c + u)
   Kneser-Ney:   A_j = (c_j - d_j) / c,  d_j = min(0.75, c_j)    γ = Σ d_j / c
+  modified KN:  as Kneser-Ney, with d_j = D1, D2 or D3+ for c_j = 1, 2 or ≥ 3
   ```
+
+  Modified KN (Chen & Goodman, used here) estimates the three discounts per order from the
+  count-of-counts n1..n4 of all that order's (unpruned) counts, as KenLM does:
+  `Y = n1 / (n1 + 2 n2)`, `D1 = 1 - 2Y n2/n1`, `D2 = 2 - 3Y n3/n2`, `D3+ = 3 - 4Y n4/n3`.
 
   Here `c_j` is the count of token j after the context, `c` the total, and `u` the number of
   distinct next tokens. Kneser-Ney uses **continuation counts** (how many distinct tokens
@@ -152,13 +158,14 @@ construction, and each MLP neuron is fully described by:
 - **Context counts:** omitted, since the shipped policy doesn't use them.
 - **Size:** 10.7 MB for 512,533 contexts. As float32 with a JSON header it would be about
   34 MB.
-- **Quality cost:** quantization was accepted only after held-out typing came out the same:
-  90.21% precision and 22.19% keystrokes saved, vs 90.20% / 22.19% unquantized.
+- **Quality cost:** held-out typing gives 90.79% precision and 23.00% keystrokes saved,
+  vs 90.73% / 23.14% unquantized (`model-f32.bin`): 0.14 points of keystrokes saved for
+  a 36% smaller file.
 
 `web/autocomplete.ts` binary-searches the sorted contexts for the last 1–4 tokens, adds the
 matching neurons' deltas to the unigram logits, and applies softmax. There's no index to build
 at load time.
-- **Speed:** 2.6 ms median per keystroke (Bun); about 360 ms to load in Chrome.
+- **Speed:** 2.5 ms median per keystroke (Bun); about 360 ms to load in Chrome.
 - **Exactness:** a test exports the dense model's own tables unquantized (`f32`) and checks
   that the runtime's top-5 next tokens and log-probs equal PyTorch's.
 - **Freshness:** another test checks that the committed `web/model.bin` is byte-identical to
@@ -180,11 +187,13 @@ Nothing here is learned; the policy reads the compiled probabilities.
    `function` would get 100% even when the user is typing `funky`.
 3. **Show** the top candidate only if its probability ≥ τ. A `min_support` threshold is
    available, but the sweep found 0 best.
-4. **Extend** greedily word by word while the product of probabilities stays ≥ τ, up to 8
-   words, stopping at end-of-text or after `. ? ! :`.
+4. **Extend** greedily word by word while each next word's own probability is ≥ `ext`, up to
+   8 words, stopping at end-of-text or after `. ? ! :`. With `ext` unset (the rule before
+   v6), it extends while the product of probabilities stays ≥ τ.
 
-τ = 0.71 by default. It's a runtime argument (`ac.suggest(text, {...ac.policy, tau})`); the
-demo's `strict` / `default` / `loose` buttons use 0.90 / 0.71 / 0.60.
+τ = 0.62 and `ext` = 0.8 by default. Both are runtime arguments
+(`ac.suggest(text, {...ac.policy, tau})`); the demo's `strict` / `default` / `loose` buttons
+set τ to 0.90 / 0.62 / 0.60.
 
 ## 9. Choosing the settings (`scripts/sweep.py`)
 
@@ -198,6 +207,32 @@ benchmarking:
    characters), **coverage**, and **keystrokes saved** (accepting each correct suggestion with
    one Tab).
 4. Keep the setting with the most keystrokes saved at precision ≥ 90%, and an export ≤ 50 MB.
+
+**Round 3: lookback and look-ahead** (`docs/experiments_lookback.json`). Keystrokes saved at
+≥ 90% precision; held-out = 711 prompts + 4,000 WildChat (the larger set; numbers are lower
+than the other rounds' for that reason):
+
+| Setting | Keystrokes saved |
+|---|---|
+| KN, extend while the product ≥ τ (previous build) | 20.9% |
+| KN, per-word extension | 21.8% |
+| modified KN, extend while the product ≥ τ | 21.4% |
+| **modified KN, per-word extension (τ 0.62, ext 0.8)** | **22.1%** |
+
+On the smaller held-out set (711 + 1,000):
+- **Longer lookback:** context 5 / 6 tokens scored 22.0% / 21.8%, vs 22.2% for 4. Pruning
+  long contexts harder (kept only if seen ≥ 4, 8 or 16 times) brought the best 5-token
+  variant to a tie (22.2%), not a win. With modified KN and the per-word rule, 5 tokens tied
+  4 again (23.6% both) and 6 tokens scored 23.2%. A tie doesn't pay for a 16% bigger file, so
+  the context stays at 4.
+- **Forcing longer suggestions:** showing nothing unless ≥ 2 or ≥ 3 words clear τ cut
+  keystrokes saved to 6.3% and 2.3%. A beam search (width 4) never found a longer confident
+  chain than greedy (0 of 300 prefixes).
+- **What the per-word rule changes:** 2–4-word suggestions become 89–96% precise, instead of
+  85–93%. About 89% of suggestions are still one word.
+- **More data:** adding WildChat-4.8M text (3× the WildChat lines) scored up to 23.8% with a
+  5-token context, but it wasn't adopted: its export size under the 10–15 MB browser budget
+  was never measured.
 
 **Round 2** (`docs/sweep.json`, with WildChat; held-out = 1,000 WildChat + 711 other prompts):
 
@@ -257,7 +292,9 @@ python test_model.py`. Run `python scripts/sweep.py` to re-check the settings.
 | `phrase_weight`, `prompt_weight`, `reply_weight` | how much each source counts |
 | `max_vocab`, `min_word_count` | vocabulary cap and minimum word frequency |
 | `min_count` / `param_target` | pruning threshold, or the dense budget to fit it to |
-| `policy.tau`, `policy.min_support`, `policy.max_words` | confidence policy shipped in `model.bin` |
+| `max_export_mb` | browser budget: raise the pruning threshold until `model.bin` fits |
+| `long_factor` | contexts longer than 4 tokens need this × the pruning threshold |
+| `policy.tau`, `policy.ext`, `policy.min_support`, `policy.max_words` | confidence policy shipped in `model.bin` |
 
 ## History
 
@@ -269,7 +306,11 @@ python test_model.py`. Run `python scripts/sweep.py` to re-check the settings.
 4. **tiny-autocomplete v4:** Kneser-Ney smoothing; a confidence-gated ghost-text policy;
    settings chosen by held-out precision and keystrokes saved; a 4.5 MB browser export with a
    zero-dependency runtime.
-5. **ghost-typer (current):** renamed. Adds 105k WildChat user prompts (with credential-like
+5. **ghost-typer v5:** renamed. Adds 105k WildChat user prompts (with credential-like
    strings filtered out) and a 30,893-word vocabulary. The browser export is uint8-quantized
    (10.7 MB), with a float32 reference. The demo is boxy, retro and
    types its own examples.
+6. **ghost-typer v6 (current):** modified Kneser-Ney smoothing and a per-word extension rule
+   (τ 0.62, ext 0.8), chosen by the round-3 experiments. Same size; held-out keystrokes saved
+   22.2% → 23.0% and precision 90.2% → 90.8%. The counting moved to numpy (a test checks it
+   builds the same tables as the old dict counter), which cut compile memory.

@@ -49,8 +49,8 @@ precision is measured on held-out prompts.
 - **Two compiles, one model family:** the browser build is a sibling compile, not a
   quantization of `model.safetensors`. It uses a bigger vocabulary (30,893 vs 6,000 words)
   because words cost almost nothing in its sparse format.
-- **Quantization cost:** within the browser build, uint8 vs float32 changes held-out
-  precision and keystrokes saved by ≤ 0.01 points.
+- **Quantization cost:** within the browser build, uint8 vs float32 costs 0.14 points of
+  keystrokes saved (23.00% vs 23.14%) at the same precision (90.8% vs 90.7%).
 - **No half-precision transformers model:** its logits are scaled by 1e-5 to keep the network
   exact, which float16/bf16 would break.
 
@@ -59,14 +59,14 @@ precision is measured on held-out prompts.
 | Use it for | apps: on-device, no server | `transformers`, `pipeline`, research |
 | Size | **10.7 MB** (uint8-quantized) | 1.60 GB, 400M params (97% zeros) |
 | Vocabulary / contexts | **30,893 words** / 512,533 contexts | 6,000 words / 12,607 contexts |
-| Speed | **2.6 ms median, 4.7 ms p95 per keystroke** | 65 ms per next token (PyTorch CPU) |
+| Speed | **2.5 ms median, 4.3 ms p95 per keystroke** | 65 ms per next token (PyTorch CPU) |
 
 Both are the same kind of network. The browser model stores only the non-zero parts of the
 compiled transformer; see [how it works](#how-it-works).
 
 ## What it suggests
 
-Output of the browser model (uint8) at the default threshold (0.71). Gray is the ghost text;
+Output of the browser model (uint8) with the default policy. Gray is the ghost text;
 *(quiet)* means it suggests nothing.
 
 | Typed | Ghost text | Confidence |
@@ -75,7 +75,7 @@ Output of the browser model (uint8) at the default threshold (0.71). Gray is the
 | `write a react comp` | `onent` | 90% |
 | `how do i conv` | `ert` | 99% |
 | `i'm getting an err` | `or` | 99% |
-| `can you explain the differ` | `ence between` | 95% |
+| `can you explain the differ` | `ence between` | 90% |
 | `how to install` | *(quiet)* | |
 
 ## How often it's right
@@ -87,16 +87,18 @@ quiet. This is measured with `python scripts/benchmark.py` on the shipped quanti
 - **Coverage:** the share of keystrokes where something is shown.
 - **Keystrokes saved:** the share saved by accepting every correct suggestion with Tab.
 
-| Threshold | Precision | Coverage | Keystrokes saved | Real chat prompts only (WildChat) |
+| First-word threshold τ | Precision | Coverage | Keystrokes saved | Real chat prompts only (WildChat) |
 |---|---|---|---|---|
-| **0.71 (default)** | **90.2%** | 37.4% | **22.2%** | 89.9% precision, 21.7% saved |
-| 0.80 | 93.4% | 32.6% | 19.5% | 92.9%, 19.1% |
-| 0.90 (`strict`) | 96.4% | 26.2% | 15.7% | 96.3%, 15.5% |
-| 0.95 | 97.7% | 20.6% | 12.3% | 97.4%, 12.1% |
+| **0.62 (default)** | **90.8%** | 39.2% | **23.0%** | 90.0% precision, 22.2% saved |
+| 0.80 | 94.9% | 30.5% | 18.3% | 94.5%, 17.8% |
+| 0.90 (`strict`) | 96.7% | 24.4% | 15.1% | 96.4%, 14.7% |
+| 0.95 | 97.4% | 19.0% | 12.1% | 97.1%, 11.9% |
 
-Held-out sets: 1,000 WildChat prompts plus 711 OASST, MBPP and CoNaLa prompts. Adding
-WildChat raised keystrokes saved on real chat prompts from 6.8% to 21.7%. The threshold is a
-runtime setting, so an app can trade coverage for precision without recompiling.
+Every row extends word by word while each next word is ≥ 80% likely (`ext` = 0.8). The
+previous build (Kneser-Ney, extend while the combined probability ≥ 0.71) scored 90.2%
+precision and 22.2% saved. Held-out sets: 1,000 WildChat prompts plus 711 OASST, MBPP and
+CoNaLa prompts. Both thresholds are runtime settings, so an app can trade coverage for
+precision without recompiling.
 
 ## Use it in your app
 
@@ -116,7 +118,7 @@ input.addEventListener("input", () => {
   showGhostText(ghost);                                  // Tab -> input.value += ghost
 });
 
-ac.suggest(text, { ...ac.policy, tau: 0.9 });            // stricter: ~96% precision
+ac.suggest(text, { ...ac.policy, tau: 0.9 });            // stricter: ~97% precision
 ```
 
 Run the demo locally. It's a static page:
@@ -148,16 +150,16 @@ Measured on a 10-core Apple Silicon laptop (32 GB RAM), CPU only. Raw numbers ar
 
 | | |
 |---|---|
-| Compile the browser model (126,347 lines) | **30 s** |
-| Compile the 400M-parameter transformers model | **21 s** (peak memory 4.3 GB) |
+| Compile the browser model (126,347 lines) | **21 s** |
+| Compile the 400M-parameter transformers model | **14 s** (peak memory 3.6 GB) |
 | GPU hours / compute cost | **0 / $0** |
 | Reproducible | byte-identical rebuilds (both artifacts) |
 | Browser model in Chrome | about 360 ms to load (local); a few ms per keystroke |
 
 ## How it works
 
-- **The network:** an exact transformer implementation of an **interpolated Kneser-Ney
-  5-gram model**. It predicts the next token from the current token plus the 3 before it,
+- **The network:** an exact transformer implementation of an **interpolated modified
+  Kneser-Ney 5-gram model** (Chen & Goodman discounts per order, as in KenLM). It predicts the next token from the current token plus the 3 before it,
   backing off to shorter contexts.
 - **Attention:** 3 heads with constant queries and keys. Their RoPE phases make each head copy
   the token exactly 1, 2 or 3 positions back into its own slot.
@@ -165,19 +167,22 @@ Measured on a 10-core Apple Silicon laptop (32 GB RAM), CPU only. Raw numbers ar
   `log p(next | context) − log p(next | shorter context)` to the logits. These additions
   telescope to the longest known context's log-probability.
 - **Browser model:** stores each neuron's context and logit changes. The changes are always
-  ≥ 0, so they're stored as uint8 with one scale per context length. That changes held-out
-  results by ≤ 0.01 points. The runtime binary-searches the sorted contexts, evaluating only
+  ≥ 0, so they're stored as uint8 with one scale per context length. That costs 0.14 points
+  of keystrokes saved on held-out prompts. The runtime binary-searches the sorted contexts, evaluating only
   the neurons that match.
 - **Confidence policy** (`suggest.py`, mirrored by `web/autocomplete.ts`):
   - **Partial words:** completes the word being typed, among vocabulary words with that
     prefix. Its probability is scaled by the chance that a word with this prefix is in the
     vocabulary at all.
-  - **When to show:** only if that probability is ≥ τ.
-  - **Extension:** grows word by word while the combined probability stays ≥ τ.
+  - **When to show:** only if that probability is ≥ τ (0.62).
+  - **Extension:** grows word by word while each next word is ≥ `ext` (0.8) likely on its
+    own. This beat the old rule (combined probability ≥ τ) by 0.9 points of keystrokes saved.
+    Forcing 2 or 3 words cut keystrokes saved to 6% and 2%.
 - **Settings were measured, not hand-tuned:** `scripts/sweep.py` compiled each candidate and
   kept the most keystrokes saved at ≥ 90% precision. It covered source weights, vocabulary
   size, pruning and context length.
-  - **Longer contexts** (5–8 tokens) lost both times, even with 5× more data.
+  - **Longer contexts** (5–8 tokens) never beat 4 tokens: at best a tie, with long contexts
+    pruned harder ([experiments](docs/experiments_lookback.json)).
   - **A "topic" attention head** didn't help either (`scripts/experiment_topic.py`).
 
 Details, formulas and the proof of exactness are in [docs/how-it-works.md](docs/how-it-works.md).

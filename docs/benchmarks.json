@@ -8,18 +8,18 @@
     "torch": "2.15.0"
   },
   "compile_dense": {
-    "seconds": 20.5,
+    "seconds": 13.5,
     "runs": [
-      20.6,
-      20.5
+      13.5,
+      14.0
     ],
     "byte_identical_rebuild": true,
-    "sha256": "349ae699c0a4e98843cde0949e8da187ce19935b6f5558c91bf580ba6444fbc0",
+    "sha256": "60ae8a557cdc9a2c2e8d1fffce45187eb079ab46d0929dead9b23fcebad0d031",
     "mb": 1599.67,
-    "peak_memory_gb": 4.3,
-    "tokenize_seconds": 2.76,
-    "count_seconds": 12.45,
-    "build_tensors_seconds": 2.22,
+    "peak_memory_gb": 3.6,
+    "tokenize_seconds": 2.74,
+    "count_seconds": 5.36,
+    "build_tensors_seconds": 2.05,
     "source_lines": 126347,
     "params": 399916440,
     "nonzero_params": 13553535,
@@ -29,210 +29,212 @@
     "contexts_kept": 12607
   },
   "compile_web": {
-    "seconds": 29.7,
+    "seconds": 21.2,
     "runs": [
-      29.8,
-      29.7
+      21.4,
+      21.2
     ],
     "byte_identical_rebuild": true,
-    "sha256": "e45f3066f6e6c19d9191b11eb6910cbc1b91013fcd9f51063698a4cc139f8135",
+    "sha256": "b49b81f934b345a8a27348ac8660747b12f7dc457ec58586b0966a49a5644a80",
     "mb": 10.69,
     "contexts": 512533,
     "vocab": 30893,
     "deltas": "u8"
   },
   "pytorch": {
-    "load_seconds": 0.2,
-    "next_word_ms": 65.0,
-    "generate_tokens_per_second": 17.8,
+    "load_seconds": 0.1,
+    "next_word_ms": 58.2,
+    "generate_tokens_per_second": 18.8,
     "threads": 8
   },
   "web_keystroke_latency": {
     "runtime": "web/autocomplete.ts on Bun",
-    "median_ms": 2.61,
-    "p95_ms": 4.68,
-    "max_ms": 5.57
+    "median_ms": 2.47,
+    "p95_ms": 4.25,
+    "max_ms": 5.49
   },
-  "max_logprob_error_vs_ngram": 1.4416141219442125e-05,
+  "max_logprob_error_vs_ngram": 1.4116566347865955e-05,
   "heldout_typing_web": {
     "policy": {
-      "tau": 0.71,
+      "tau": 0.62,
       "min_support": 0,
-      "max_words": 8
+      "max_words": 8,
+      "ext": 0.8
     },
     "heldout": {
       "prompts": 711,
       "wildchat": 1000
     },
-    "tau=0.71": {
+    "tau=0.62": {
       "all": {
-        "precision": 0.9021,
-        "coverage": 0.3743,
-        "keystrokes_saved": 0.2219,
-        "shown": 40287
+        "precision": 0.9079,
+        "coverage": 0.3919,
+        "keystrokes_saved": 0.23,
+        "shown": 42183
       },
       "prompts": {
-        "precision": 0.907,
-        "coverage": 0.394,
-        "keystrokes_saved": 0.2303,
-        "shown": 16342
+        "precision": 0.9188,
+        "coverage": 0.4153,
+        "keystrokes_saved": 0.243,
+        "shown": 17225
       },
       "wildchat": {
-        "precision": 0.8988,
-        "coverage": 0.3619,
-        "keystrokes_saved": 0.2166,
-        "shown": 23945
+        "precision": 0.9004,
+        "coverage": 0.3772,
+        "keystrokes_saved": 0.2219,
+        "shown": 24958
       }
     },
     "tau=0.8": {
       "all": {
-        "precision": 0.9335,
-        "coverage": 0.326,
-        "keystrokes_saved": 0.1948,
-        "shown": 35092
+        "precision": 0.9489,
+        "coverage": 0.3046,
+        "keystrokes_saved": 0.1834,
+        "shown": 32790
       },
       "prompts": {
-        "precision": 0.94,
-        "coverage": 0.3441,
-        "keystrokes_saved": 0.201,
-        "shown": 14273
+        "precision": 0.9551,
+        "coverage": 0.3245,
+        "keystrokes_saved": 0.1919,
+        "shown": 13457
       },
       "wildchat": {
-        "precision": 0.9291,
-        "coverage": 0.3147,
-        "keystrokes_saved": 0.1909,
-        "shown": 20819
+        "precision": 0.9446,
+        "coverage": 0.2922,
+        "keystrokes_saved": 0.178,
+        "shown": 19333
       }
     },
     "tau=0.9": {
       "all": {
-        "precision": 0.9644,
-        "coverage": 0.262,
-        "keystrokes_saved": 0.1569,
-        "shown": 28204
+        "precision": 0.9669,
+        "coverage": 0.2444,
+        "keystrokes_saved": 0.1509,
+        "shown": 26305
       },
       "prompts": {
-        "precision": 0.9667,
-        "coverage": 0.2787,
-        "keystrokes_saved": 0.1607,
-        "shown": 11559
+        "precision": 0.9706,
+        "coverage": 0.262,
+        "keystrokes_saved": 0.1574,
+        "shown": 10868
       },
       "wildchat": {
-        "precision": 0.9628,
-        "coverage": 0.2516,
-        "keystrokes_saved": 0.1545,
-        "shown": 16645
+        "precision": 0.9642,
+        "coverage": 0.2333,
+        "keystrokes_saved": 0.1468,
+        "shown": 15437
       }
     },
     "tau=0.95": {
       "all": {
-        "precision": 0.977,
-        "coverage": 0.206,
-        "keystrokes_saved": 0.1228,
-        "shown": 22175
+        "precision": 0.9739,
+        "coverage": 0.1904,
+        "keystrokes_saved": 0.1208,
+        "shown": 20498
       },
       "prompts": {
-        "precision": 0.9813,
-        "coverage": 0.2177,
-        "keystrokes_saved": 0.1252,
-        "shown": 9028
+        "precision": 0.9782,
+        "coverage": 0.2023,
+        "keystrokes_saved": 0.1239,
+        "shown": 8389
       },
       "wildchat": {
-        "precision": 0.9741,
-        "coverage": 0.1987,
-        "keystrokes_saved": 0.1212,
-        "shown": 13147
+        "precision": 0.971,
+        "coverage": 0.183,
+        "keystrokes_saved": 0.1188,
+        "shown": 12109
       }
     }
   },
   "heldout_typing_dense_tables": {
     "policy": {
-      "tau": 0.71,
+      "tau": 0.62,
       "min_support": 0,
-      "max_words": 8
+      "max_words": 8,
+      "ext": 0.8
     },
     "heldout": {
       "prompts": 711,
       "wildchat": 1000
     },
-    "tau=0.71": {
+    "tau=0.62": {
       "all": {
-        "precision": 0.9326,
-        "coverage": 0.2743,
-        "keystrokes_saved": 0.1521,
-        "shown": 29525
+        "precision": 0.9171,
+        "coverage": 0.3126,
+        "keystrokes_saved": 0.1759,
+        "shown": 33650
       },
       "prompts": {
-        "precision": 0.944,
-        "coverage": 0.307,
-        "keystrokes_saved": 0.1708,
-        "shown": 12734
+        "precision": 0.9314,
+        "coverage": 0.3498,
+        "keystrokes_saved": 0.2003,
+        "shown": 14507
       },
       "wildchat": {
-        "precision": 0.9239,
-        "coverage": 0.2538,
-        "keystrokes_saved": 0.1403,
-        "shown": 16791
+        "precision": 0.9062,
+        "coverage": 0.2893,
+        "keystrokes_saved": 0.1606,
+        "shown": 19143
       }
     },
     "tau=0.8": {
       "all": {
-        "precision": 0.9563,
-        "coverage": 0.2247,
+        "precision": 0.958,
+        "coverage": 0.2188,
         "keystrokes_saved": 0.125,
-        "shown": 24188
+        "shown": 23547
       },
       "prompts": {
-        "precision": 0.9631,
-        "coverage": 0.2542,
-        "keystrokes_saved": 0.1401,
-        "shown": 10541
+        "precision": 0.965,
+        "coverage": 0.2492,
+        "keystrokes_saved": 0.1428,
+        "shown": 10334
       },
       "wildchat": {
-        "precision": 0.9511,
-        "coverage": 0.2063,
-        "keystrokes_saved": 0.1155,
-        "shown": 13647
+        "precision": 0.9525,
+        "coverage": 0.1997,
+        "keystrokes_saved": 0.1139,
+        "shown": 13213
       }
     },
     "tau=0.9": {
       "all": {
-        "precision": 0.9806,
-        "coverage": 0.1512,
-        "keystrokes_saved": 0.0816,
-        "shown": 16279
+        "precision": 0.9764,
+        "coverage": 0.1481,
+        "keystrokes_saved": 0.0855,
+        "shown": 15942
       },
       "prompts": {
-        "precision": 0.9852,
-        "coverage": 0.176,
-        "keystrokes_saved": 0.092,
-        "shown": 7300
+        "precision": 0.9813,
+        "coverage": 0.1738,
+        "keystrokes_saved": 0.0997,
+        "shown": 7208
       },
       "wildchat": {
-        "precision": 0.9769,
-        "coverage": 0.1357,
-        "keystrokes_saved": 0.0751,
-        "shown": 8979
+        "precision": 0.9723,
+        "coverage": 0.132,
+        "keystrokes_saved": 0.0767,
+        "shown": 8734
       }
     },
     "tau=0.95": {
       "all": {
-        "precision": 0.9907,
-        "coverage": 0.1009,
-        "keystrokes_saved": 0.0532,
-        "shown": 10862
+        "precision": 0.9846,
+        "coverage": 0.0994,
+        "keystrokes_saved": 0.06,
+        "shown": 10704
       },
       "prompts": {
-        "precision": 0.9939,
-        "coverage": 0.1186,
-        "keystrokes_saved": 0.0601,
-        "shown": 4917
+        "precision": 0.99,
+        "coverage": 0.1182,
+        "keystrokes_saved": 0.0687,
+        "shown": 4901
       },
       "wildchat": {
-        "precision": 0.9881,
-        "coverage": 0.0899,
-        "keystrokes_saved": 0.0489,
-        "shown": 5945
+        "precision": 0.98,
+        "coverage": 0.0877,
+        "keystrokes_saved": 0.0545,
+        "shown": 5803
       }
     }
   },

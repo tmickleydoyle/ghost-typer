@@ -12,7 +12,9 @@
 
 import { decodePieces, preTokenize } from "../tokenizer.ts";
 
-export type Policy = { tau: number; min_support: number; max_words: number };
+// tau: min probability of the first word (and of the whole suggestion when ext is null/absent);
+// ext: min probability of each word after the first.
+export type Policy = { tau: number; min_support: number; max_words: number; ext?: number | null };
 export type Step = { text: string; prob: number; support: number };
 export type Suggestion = { ghost: string; prob: number; steps: Step[] };
 
@@ -240,8 +242,13 @@ export class CompiledAutocomplete {
   static apply(steps: Step[], policy: Policy): { ghost: string; prob: number } {
     let ghost = "";
     let prob = 0;
-    for (const st of steps.slice(0, policy.max_words)) {
-      if (st.prob < policy.tau || st.support < policy.min_support) break;
+    const n = Math.min(steps.length, policy.max_words);
+    for (let i = 0; i < n; i++) {
+      const st = steps[i];
+      if (st.support < policy.min_support) break;
+      if (i && policy.ext != null) {
+        if (st.prob / steps[i - 1].prob < policy.ext) break;
+      } else if (st.prob < policy.tau) break;
       ghost += st.text;
       prob = st.prob;
     }

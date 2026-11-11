@@ -1,8 +1,8 @@
 {
-  "_comment": "Chosen by scripts/sweep.py (docs/sweep.json): best keystrokes saved at >= 90% precision on held-out prompts (OASST/MBPP/CoNaLa + WildChat). hf = dense transformers model (vocab capped for width); web = sparse browser export.",
+  "_comment": "Chosen by scripts/sweep.py (docs/sweep.json): best keystrokes saved at >= 90% precision on held-out prompts (OASST/MBPP/CoNaLa + WildChat); smoothing and policy.ext from the lookback/look-ahead experiments (docs/experiments_lookback.json). hf = dense transformers model (vocab capped for width); web = sparse browser export.",
   "hf": {
     "n_prev": 3,
-    "smoothing": "kn",
+    "smoothing": "mkn",
     "phrase_weight": 1.0,
     "prompt_weight": 1.0,
     "reply_weight": 1.0,
@@ -15,7 +15,7 @@
   },
   "web": {
     "n_prev": 3,
-    "smoothing": "kn",
+    "smoothing": "mkn",
     "phrase_weight": 1.0,
     "prompt_weight": 1.0,
     "reply_weight": 1.0,
@@ -25,9 +25,10 @@
     "min_count": 2
   },
   "policy": {
-    "tau": 0.71,
+    "tau": 0.62,
     "min_support": 0,
-    "max_words": 8
+    "max_words": 8,
+    "ext": 0.8
   },
   "export": {
     "deltas": "u8"

@@ -171,7 +171,7 @@ def heldout_typing(name: str, sets: dict[str, list[str]], src: dict) -> dict:
     recs = {k: sweep.record(sugg, texts) for k, texts in sets.items()}
     out = {"policy": policy.__dict__, "heldout": {k: len(v) for k, v in sets.items()}}
     for t in [policy.tau, 0.8, 0.9, 0.95]:
-        p = sg.Policy(tau=t, min_support=policy.min_support)
+        p = sg.Policy(tau=t, min_support=policy.min_support, ext=policy.ext)
         out[f"tau={t}"] = {"all": sweep.evaluate([r for rs in recs.values() for r in rs], p),
                            **{k: sweep.evaluate(rs, p) for k, rs in recs.items()}}
     return out

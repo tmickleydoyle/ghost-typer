@@ -23,8 +23,8 @@ CASES = {
     "You can use the": "following code:",
     "can you explain the": "difference between the two lists in the code",
     "write a react": "native",
-    "Where is the": "error.",
-    "Thank you for your": "help with a single line",
+    "Where is the": "error:",
+    "Thank you for your": "response, and the other way to do this?",
 }
 
 
@@ -120,6 +120,46 @@ class TestNoSecrets(unittest.TestCase):
             self.assertEqual([w for w in words if looks_secret(w)], [], name)
 
 
+class TestCounting(unittest.TestCase):
+    """compile_tables' numpy counting builds the same tables as the plain-dict reference."""
+
+    def test_matches_dict_reference(self):
+        bw = build_weights
+        src = bw.load_sources()
+        rng = random.Random(0)
+        sample = {k: v if k == "phrases" else rng.sample(v, min(3000, len(v))) for k, v in src.items()}
+        cases = [("kn", 1.0, 3, 2, 1.0), ("mkn", 1.0, 5, 2, 2.0), ("wb", 0.3, 4, 1.5, 1.0)]
+        for smoothing, w, n_prev, min_count, long_factor in cases:
+            with self.subTest(smoothing=smoothing, n_prev=n_prev):
+                s = bw.Settings(n_prev=n_prev, smoothing=smoothing, phrase_weight=5.0, wildchat_weight=w, max_vocab=4000,
+                                min_word_count=2, min_count=min_count, long_factor=long_factor)
+                vocab, got, _ = bw.compile_tables(s, sample)
+                index = {p: i for i, p in enumerate(vocab)}
+                weighted = [([index.get(p, bw.UNK_ID) for p in t], wt) for lines, wt in bw.weighted_sources(s, sample) for t in lines]
+                raw = bw.count_ngrams(weighted, s.order)
+                forced = {c for t in sample["phrases"] for ctxs, _ in bw.padded_events([index[p] for p in t], s.order) for c in ctxs[1:]}
+                keep = [set()] + [
+                    {c for c, t in raw[k].items() if c in forced or sum(t.values()) >= (min_count if k <= 4 else min_count * long_factor)}
+                    for k in range(1, s.order + 1)
+                ]
+                ref = bw.NGram.from_counts(raw, keep, len(vocab), s)
+                for k in range(s.order + 1):
+                    a, b = got.tables[k], ref.tables[k]
+                    self.assertEqual(set(a), set(b), k)
+                    if k:
+                        for ctx in b:
+                            self.assertEqual(set(a[ctx]), set(b[ctx]))
+                            for j, c in b[ctx].items():  # fractional weights: summation order differs
+                                self.assertLess(abs(a[ctx][j] - c), 1e-9 * max(1.0, abs(c)))
+                for ctx, c in ref.support.items():
+                    self.assertLess(abs(got.support[ctx] - c), 1e-9 * max(1.0, abs(c)))
+                if smoothing == "mkn":
+                    for k in range(1, s.order + 1):
+                        for x, y in zip(got.mkn_discounts[k], ref.mkn_discounts[k]):
+                            self.assertAlmostEqual(x, y, places=12)
+                self.assertLess(abs(got.base_logits - ref.base_logits).max(), 1e-12)
+
+
 @unittest.skipUnless(shutil.which("bun"), "bun not installed")
 class TestWebExport(unittest.TestCase):
     """web/model.bin + web/autocomplete.ts (run `python export_web.py` first)."""
@@ -164,7 +204,10 @@ class TestWebExport(unittest.TestCase):
                     self.assertAlmostEqual(a.prob, b["prob"], places=3)
                     if self.policy.min_support > 0:  # supports are only exported when the policy uses them
                         self.assertAlmostEqual(a.support, b["support"], places=3)
-                if all(abs(s.prob - self.policy.tau) > 1e-3 for s in py):  # skip float32 ties at the threshold
+                ratios = [b.prob / a.prob for a, b in zip(py, py[1:])] if self.policy.ext is not None else []
+                if all(abs(s.prob - self.policy.tau) > 1e-3 for s in py) and all(
+                    abs(r - self.policy.ext) > 1e-3 for r in ratios
+                ):  # skip float32 ties at the thresholds
                     self.assertEqual(self.suggest.Suggester.apply(py, self.policy), res["ghost"])
 
     def test_runtime_matches_dense_transformer(self):

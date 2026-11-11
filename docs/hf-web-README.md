@@ -33,13 +33,18 @@ zero-dependency TypeScript runtime. **Demo:** https://tmickleydoyle.github.io/gh
 
 | File | Precision | Size | Held-out precision | Keystrokes saved | Use it for |
 |---|---|---|---|---|---|
-| **`model.bin`** | **uint8** logit changes, one scale per context length | **10.7 MB** | 90.2% | 22.2% | **apps (recommended)** |
-| `model-f32.bin` | float32 (unquantized) | 16.8 MB | 90.2% | 22.2% | reference, exactness checks |
+| **`model.bin`** | **uint8** logit changes, one scale per context length | **10.7 MB** | 90.8% | 23.0% | **apps (recommended)** |
+| `model-f32.bin` | float32 (unquantized) | 16.8 MB | 90.7% | 23.1% | reference, exactness checks |
 
-Both files hold the same compile: 30,893 words and 512,533 contexts. Quantization changed
-held-out results by ≤ 0.01 points (90.21% vs 90.20% precision; 22.19% saved for both),
-measured by typing 1,711 held-out prompts one character at a time. The runtime reads either
-file.
+Both files hold the same compile: 30,893 words and 512,533 contexts. Quantization costs 0.14
+points of keystrokes saved (23.00% vs 23.14%) and leaves precision unchanged (90.79% vs
+90.73%), measured by typing 1,711 held-out prompts one character at a time. The runtime reads
+either file.
+
+**Update (v6):** modified Kneser-Ney smoothing and a per-word extension rule. Previous build:
+90.2% precision, 22.2% keystrokes saved, same size. `model.bin` now carries `policy.ext`, which
+only the current runtime (`ghost-typer.js`, `src/`) reads. Update the runtime together with the
+model: an older runtime ignores `ext` and its suggestions run below 90% precision.
 
 The runtime itself is `ghost-typer.js` (bundled ESM, ~5 KB) with sources in `src/`. A demo page
 (`index.html`, `demo.js`) loads `./model.bin`.
@@ -61,10 +66,12 @@ input.addEventListener("input", () => {
 });
 ```
 
-`ac.suggest(text, { ...ac.policy, tau: 0.9 })` gives a stricter threshold (~96% precision, 15.7%
-keystrokes saved). The default τ is 0.71.
+The default policy shows the word being typed if it is ≥ 62% likely (τ = 0.62), then extends
+word by word while each next word is ≥ 80% likely on its own (`ext` = 0.8).
+`ac.suggest(text, { ...ac.policy, tau: 0.9 })` gives a stricter threshold (96.7% precision,
+15.1% keystrokes saved).
 
-Per keystroke it takes 2.6 ms median and 4.7 ms p95 (Bun). Loading the uint8 file takes about
+Per keystroke it takes 2.5 ms median and 4.3 ms p95 (Bun). Loading the uint8 file takes about
 360 ms in Chrome.
 
 To try the demo locally: `git clone https://huggingface.co/tmickleydoyle/ghost-typer-web`, then
@@ -75,7 +82,7 @@ To try the demo locally: `git clone https://huggingface.co/tmickleydoyle/ghost-t
 The [main repo](https://huggingface.co/tmickleydoyle/ghost-typer) holds the float32
 `LlamaForCausalLM` (`model.safetensors`, 400M parameters, 97% zeros) and the compiler. Both
 artifacts are compiled from the same text by the same closed-form rules: an interpolated
-Kneser-Ney 5-gram, with one MLP neuron per context.
+modified Kneser-Ney 5-gram, with one MLP neuron per context.
 - **What's stored:** the browser model keeps only the non-zero parts, namely each neuron's
   context tokens and the logit changes it writes.
 - **Different settings:** it's compiled with browser settings (30,893-word vocabulary vs

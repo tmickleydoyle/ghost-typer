@@ -27,6 +27,7 @@ Compile settings live in compile_settings.json ("hf" for this dense model,
 "web" for the sparse browser export written by export_web.py).
 """
 
+import itertools
 import json
 import math
 import zlib
@@ -63,15 +64,22 @@ PRE_TOKENIZER = pre_tokenizers.ByteLevel(add_prefix_space=True)
 @dataclass(frozen=True)
 class Settings:
     n_prev: int = 3  # previous tokens attended to; context = n_prev + current token
-    smoothing: str = "wb"  # "wb" (Witten-Bell) or "kn" (interpolated Kneser-Ney)
-    discount: float = 0.75  # Kneser-Ney absolute discount
+    smoothing: str = "wb"  # "wb" (Witten-Bell), "kn" (interpolated Kneser-Ney) or "mkn" (modified KN)
+    discount: float = 0.75  # Kneser-Ney absolute discount ("mkn" estimates its own per order)
     phrase_weight: float = 5.0  # weight of one hand-written phrase (phrases/*.txt)
     prompt_weight: float = 1.0  # weight of one user prompt (data/prompts.txt)
     reply_weight: float = 1.0  # weight of one assistant reply sentence (data/replies.txt)
     wildchat_weight: float = 1.0  # weight of one WildChat user prompt (data/wildchat.txt)
     max_vocab: int = 3000
     min_word_count: float = 3
-    min_count: float | None = None  # None: smallest context count that fits param_target
+    # Contexts of length <= 4 are kept if seen >= min_count times. None: the smallest count that
+    # fits param_target (dense model). With max_export_mb (browser export, export_web.py),
+    # min_count is the floor and the threshold is raised until the export fits.
+    min_count: float | None = None
+    max_export_mb: float | None = None
+    # Contexts longer than 4 tokens need long_factor x the threshold: long contexts count only
+    # where they were seen often enough to be reliable.
+    long_factor: float = 1.0
     force_phrases: bool = True  # always keep every context from the hand-written phrases
     param_target: int = 400_000_000
 
@@ -155,6 +163,8 @@ def padded_events(seq: list[int], order: int):
 
 
 def count_ngrams(weighted: list[tuple[list[int], float]], order: int) -> list[defaultdict]:
+    """Every n-gram count in Python dicts. Slow and memory-hungry: only the tests use it, as the
+    reference for the numpy counting in compile_tables."""
     counts = [defaultdict(Counter) for _ in range(order + 1)]
     for seq, weight in weighted:
         for ctxs, nxt in padded_events(seq, order):
@@ -175,20 +185,13 @@ class NGram:
     log p_k(j) - log(gamma * p_{k-1}(j)) for its seen tokens and 0 elsewhere.
     """
 
-    def __init__(self, raw: list[dict], keep: list[set], vocab_size: int, s: Settings):
+    def __init__(self, tables: list[dict], support: dict, mkn: list | None, vocab_size: int, s: Settings):
+        """tables[0]: {next: count}; tables[k]: {context: {next: count}} for kept contexts of length k
+        (raw counts at the top order and for Witten-Bell, continuation counts below it for KN);
+        support: raw weighted count of each kept context; mkn: per-order (D1, D2, D3+) for "mkn"."""
         self.s, self.V, self.order = s, vocab_size, s.order
-        self.support = {ctx: sum(raw[k][ctx].values()) for k in range(1, self.order + 1) for ctx in keep[k]}
-        if s.smoothing == "kn":
-            cont = [defaultdict(Counter) for _ in range(self.order)]
-            for k in range(self.order):
-                for ctx, table in raw[k + 1].items():
-                    for j in table:
-                        cont[k][ctx[1:]][j] += 1
-            self.tables = [cont[0][()]] + [{c: cont[k][c] for c in keep[k]} for k in range(1, self.order)]
-            self.tables.append({c: raw[self.order][c] for c in keep[self.order]})
-        elif s.smoothing == "wb":
-            self.tables = [raw[0][()]] + [{c: raw[k][c] for c in keep[k]} for k in range(1, self.order + 1)]
-        else:
+        self.tables, self.support, self.mkn_discounts = tables, support, mkn
+        if s.smoothing not in ("wb", "kn", "mkn"):
             raise ValueError(s.smoothing)
         for k in range(2, self.order + 1):
             assert all(c[1:] in self.tables[k - 1] for c in self.tables[k]), "backoff chain broken"
@@ -203,6 +206,30 @@ class NGram:
         self.p0 = p0 / p0.sum()
         self._prob, self._delta, self._stats = {}, {}, {}
 
+    @classmethod
+    def from_counts(cls, raw: list[dict], keep: list[set], vocab_size: int, s: Settings) -> "NGram":
+        """Reference construction from count_ngrams() dicts (tests only)."""
+        order = s.order
+        support = {ctx: sum(raw[k][ctx].values()) for k in range(1, order + 1) for ctx in keep[k]}
+        mkn = None
+        if s.smoothing in ("kn", "mkn"):
+            cont = [defaultdict(Counter) for _ in range(order)]
+            for k in range(order):
+                for ctx, table in raw[k + 1].items():
+                    for j in table:
+                        cont[k][ctx[1:]][j] += 1
+            tables = [cont[0][()]] + [{c: cont[k][c] for c in keep[k]} for k in range(1, order)]
+            tables.append({c: raw[order][c] for c in keep[order]})
+            if s.smoothing == "mkn":
+                full = [None] + [cont[k] for k in range(1, order)] + [raw[order]]
+                mkn = [None] + [mkn_discounts([c for t in full[k].values() for c in t.values()]) for k in range(1, order + 1)]
+        else:
+            tables = [raw[0][()]] + [{c: raw[k][c] for c in keep[k]} for k in range(1, order + 1)]
+        return cls(tables, support, mkn, vocab_size, s)
+
+    def clear_caches(self) -> None:
+        self._prob, self._stats, self._delta = {}, {}, {}
+
     def _table_stats(self, ctx: tuple):
         if ctx not in self._stats:
             table = self.tables[len(ctx)][ctx]
@@ -211,7 +238,11 @@ class NGram:
                 u = len(table)
                 self._stats[ctx] = (table, {j: c / (total + u) for j, c in table.items()}, u / (total + u))
             else:
-                d = {j: min(self.s.discount, c) for j, c in table.items()}
+                if self.s.smoothing == "mkn":
+                    D = self.mkn_discounts[len(ctx)]
+                    d = {j: min(D[min(int(round(c)), 3) - 1] if c >= 0.5 else D[0], c) for j, c in table.items()}
+                else:
+                    d = {j: min(self.s.discount, c) for j, c in table.items()}
                 self._stats[ctx] = (table, {j: (c - d[j]) / total for j, c in table.items()}, sum(d.values()) / total)
         return self._stats[ctx]
 
@@ -270,41 +301,163 @@ class NGram:
         return torch.from_numpy(self.predict(ids)[0])
 
 
-def compile_tables(s: Settings, sources: dict):
+def mkn_discounts(counts) -> tuple[float, float, float]:
+    """Chen & Goodman (D1, D2, D3+) from the count-of-counts n1..n4 of all (unpruned) counts an
+    order's tables are built from, as KenLM does (counts rounded to integers)."""
+    r = np.round(np.asarray(counts, dtype=np.float64))
+    n = {i: int((r == i).sum()) for i in range(1, 5)}
+    if not all(n[i] for i in range(1, 5)):
+        return (0.5, 1.0, 1.5)
+    y = n[1] / (n[1] + 2 * n[2])
+    ds = (1 - 2 * y * n[2] / n[1], 2 - 3 * y * n[3] / n[2], 3 - 4 * y * n[4] / n[3])
+    return tuple(min(max(d, 0.0), float(i + 1)) for i, d in enumerate(ds))
+
+
+def compile_tables(s: Settings, sources: dict, vocab: list[str] | None = None, export_size=None):
     """vocab, NGram and stats for settings s (min_count=None fits the dense param budget)."""
-    vocab = build_vocab(s, sources)
+    # export_size(contexts_by_len, pairs_by_len) -> bytes: required with s.max_export_mb.
+    vocab = vocab or build_vocab(s, sources)
+    V, order = len(vocab), s.order
     index = {p: i for i, p in enumerate(vocab)}
     weighted = [([index.get(p, UNK_ID) for p in toks], w) for lines, w in weighted_sources(s, sources) for toks in lines]
-    raw = count_ngrams(weighted, s.order)
-    forced = set()
+    win, nxt, wts = _windows(weighted, order)
+    del weighted
+    forced_win = None
     if s.phrase_weight > 0 and s.force_phrases:
-        for toks in sources["phrases"]:
-            for ctxs, _ in padded_events([index[p] for p in toks], s.order):
-                forced.update(ctxs[1:])
+        forced_win, _, _ = _windows([([index[p] for p in toks], 1.0) for toks in sources["phrases"]], order, drop_unk=False)
 
-    totals = {ctx: sum(t.values()) for k in range(1, s.order + 1) for ctx, t in raw[k].items()}
+    # One level per context length k: unique (context, next) pairs in lexicographic order.
+    kn = s.smoothing in ("kn", "mkn")
+    levels, mkn = [], [None] * (order + 1)
+    uni = None
+    for k in range(1, order + 1):
+        pairs, raw = _group(np.concatenate([win[:, order - k :], nxt[:, None]], axis=1), wts)
+        if kn:
+            # Continuation counts one level down: distinct tokens preceding each (ctx[1:], next).
+            # Those pairs are exactly level k-1's pairs, in the same order.
+            low, cont = _group(pairs[:, 1:])
+            if k == 1:
+                uni = dict(zip(low[:, 0].tolist(), cont.tolist()))
+            else:
+                assert len(cont) == len(levels[-1]["nxt"])
+                levels[-1]["vals"] = cont
+                mkn[k - 1] = mkn_discounts(cont) if s.smoothing == "mkn" else None
+            del low
+        first = _starts(pairs[:, :k])
+        lvl = {
+            "ctx": np.ascontiguousarray(pairs[first, :k]),
+            "off": np.append(first, len(pairs)),
+            "nxt": pairs[:, k].copy(),
+            "vals": raw,  # replaced by continuation counts for KN below the top order
+            "total": np.add.reduceat(raw, first),
+        }
+        lvl["forced"] = np.zeros(len(first), dtype=bool)
+        if forced_win is not None:
+            lvl["forced"] = np.isin(_rows_as_void(lvl["ctx"]), _rows_as_void(np.unique(forced_win[:, order - k :], axis=0)))
+        levels.append(lvl)
+        del pairs
+    if s.smoothing == "mkn":
+        mkn[order] = mkn_discounts(levels[-1]["vals"])
+    if not kn:
+        j, c = _group(nxt[:, None], wts)
+        uni = dict(zip(j[:, 0].tolist(), c.tolist()))
+    del win, nxt, wts
+
+    def kept(m: float) -> list[np.ndarray]:
+        return [lv["forced"] | (lv["total"] >= (m if k <= 4 else m * s.long_factor)) for k, lv in enumerate(levels, 1)]
+
+    def fits(m: float) -> bool:
+        masks = kept(m)
+        if s.max_export_mb is not None:
+            n = [int(mk.sum()) for mk in masks]
+            pairs = [int(np.diff(lv["off"])[mk].sum()) for lv, mk in zip(levels, masks)]
+            return export_size(n, pairs) <= s.max_export_mb * 1e6
+        return dense_params(V, s.n_prev, 1 + sum(int(mk.sum()) for mk in masks)) <= s.param_target
+
     min_count = s.min_count
-    if min_count is None:
-        # Smallest count threshold whose kept neurons (forced + total >= threshold) fit the budget.
-        hist = Counter(0 if ctx in forced else c for ctx, c in totals.items())
-        thresholds = sorted(c for c in hist if c > 0)
-        running, kept_at = hist[0], {}
-        for c in reversed(thresholds):
-            running += hist[c]
-            kept_at[c] = running
-        fits = [c for c in thresholds if dense_params(len(vocab), s.n_prev, 1 + kept_at[c]) <= s.param_target]
-        if not fits:
-            raise SystemExit("hand-written contexts alone exceed param_target; lower max_vocab")
-        min_count = fits[0]
-    keep = [set()] + [{c for c in raw[k] if c in forced or totals[c] >= min_count} for k in range(1, s.order + 1)]
-    ngram = NGram(raw, keep, len(vocab), s)
+    if min_count is None or s.max_export_mb is not None:
+        # Smallest threshold (among the context counts that occur, >= the min_count floor) that fits.
+        floor = min_count or 0
+        cands = np.unique(np.concatenate([lv["total"][~lv["forced"]] for lv in levels]))
+        cands = cands[cands > max(floor, 0)]
+        if floor and (not len(cands) or cands[0] > floor):
+            cands = np.concatenate([[floor], cands])
+        lo, hi = 0, len(cands)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if fits(float(cands[mid])):
+                hi = mid
+            else:
+                lo = mid + 1
+        if lo == len(cands):
+            raise SystemExit("hand-written contexts alone exceed the size budget")
+        min_count = float(cands[lo])
+
+    tables, support = [uni], {}
+    for lv, mk in zip(levels, kept(min_count)):
+        ndist = np.diff(lv["off"])[mk]
+        pair_mask = np.repeat(mk, np.diff(lv["off"]))
+        nx, vals = lv["nxt"][pair_mask].tolist(), lv["vals"][pair_mask].tolist()
+        ctxs = list(map(tuple, lv["ctx"][mk].tolist()))
+        table, pos = {}, 0
+        for ctx, n in zip(ctxs, ndist.tolist()):
+            table[ctx] = dict(zip(nx[pos : pos + n], vals[pos : pos + n]))
+            pos += n
+        tables.append(table)
+        support.update(zip(ctxs, lv["total"][mk].tolist()))
+    ngram = NGram(tables, support, mkn if s.smoothing == "mkn" else None, V, s)
     stats = {
-        "vocab": len(vocab),
+        "vocab": V,
         "min_context_count": min_count,
-        "contexts_seen": len(totals),
-        "contexts_kept": sum(len(k) for k in keep),
+        "contexts_seen": sum(len(lv["total"]) for lv in levels),
+        "contexts_kept": sum(len(t) for t in tables[1:]),
     }
     return vocab, ngram, stats
+
+
+def _windows(weighted: list[tuple[list[int], float]], order: int, drop_unk: bool = True):
+    """Every counting event (same as padded_events): (window of `order` tokens, oldest .. current,
+    next token, weight) as numpy arrays. Events predicting <unk> are dropped."""
+    lens = np.fromiter((len(seq) for seq, _ in weighted), dtype=np.int64, count=len(weighted))
+    pad = [EOS_ID] * order
+    flat = np.fromiter(itertools.chain.from_iterable(itertools.chain(pad, seq, (EOS_ID,)) for seq, _ in weighted),
+                       dtype=np.int32, count=int(lens.sum()) + len(lens) * (order + 1))
+    events = lens + 1
+    starts = np.concatenate([[0], np.cumsum(lens + order + 1)[:-1]])
+    first_event = np.concatenate([[0], np.cumsum(events)[:-1]])
+    pos = np.repeat(starts + order - 1, events) + (np.arange(int(events.sum())) - np.repeat(first_event, events))
+    win = flat[pos[:, None] + np.arange(-order + 1, 1)]
+    nxt = flat[pos + 1]
+    wts = np.repeat(np.fromiter((w for _, w in weighted), dtype=np.float64, count=len(weighted)), events)
+    if drop_unk:  # never learn to predict <unk>
+        ok = nxt != UNK_ID
+        win, nxt, wts = win[ok], nxt[ok], wts[ok]
+    return win, nxt, wts
+
+
+def _starts(rows: np.ndarray) -> np.ndarray:
+    """Indices where a run of equal rows begins (rows sorted)."""
+    new = np.ones(len(rows), dtype=bool)
+    if len(rows) > 1:
+        np.any(rows[1:] != rows[:-1], axis=1, out=new[1:])
+    return np.flatnonzero(new)
+
+
+def _group(rows: np.ndarray, weights: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
+    """Unique rows in lexicographic order with their summed weights (or number of occurrences).
+    lexsort is stable, so each group's weights are summed in event order."""
+    order = np.lexsort(rows.T[::-1])
+    rows = rows[order]
+    if weights is not None:
+        weights = weights[order]
+    first = _starts(rows)
+    sums = np.add.reduceat(weights, first) if weights is not None else np.diff(np.append(first, len(rows)))
+    return rows[first], sums
+
+
+def _rows_as_void(a: np.ndarray) -> np.ndarray:
+    a = np.ascontiguousarray(a)
+    return a.view(np.dtype((np.void, a.dtype.itemsize * a.shape[1]))).ravel()
 
 
 # ---------- dense transformer ----------
